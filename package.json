@@ -1,0 +1,31 @@
+{
+  "name": "materio-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for Materio — enables AI assistants like Claude and ChatGPT to search, browse, and read Materio educational PDFs",
+  "type": "module",
+  "main": "index.js",
+  "bin": {
+    "materio-mcp-server": "./index.js"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.6.1",
+    "zod": "^3.23.8",
+    "pdf-parse": "^1.1.1"
+  },
+  "keywords": [
+    "mcp",
+    "materio",
+    "education",
+    "pdf",
+    "ai"
+  ],
+  "author": "Materio by JTC",
+  "license": "MIT"
+}

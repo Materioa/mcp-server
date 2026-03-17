@@ -1,0 +1,127 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Materio MCP Server",
+    "description": "API for searching, listing, and reading Materio educational PDF resources. Supports browsing by semester, subject search, and full-text PDF extraction.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://your-project.vercel.app/api",
+      "description": "Production Vercel Server"
+    }
+  ],
+  "paths": {
+    "/mcp": {
+      "post": {
+        "summary": "Call Materio MCP Tools",
+        "description": "Unified endpoint for all Materio tools including search, list, and PDF reading. This endpoint follows the MCP JSON-RPC 2.0 protocol.",
+        "operationId": "callMcpTool",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["jsonrpc", "method", "params", "id"],
+                "properties": {
+                  "jsonrpc": { "type": "string", "enum": ["2.0"] },
+                  "method": { "type": "string", "enum": ["tools/call"] },
+                  "id": { "type": "integer", "example": 1 },
+                  "params": {
+                    "type": "object",
+                    "required": ["name", "arguments"],
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "description": "The name of the Materio tool to call.",
+                        "enum": [
+                          "materio_list_resources",
+                          "materio_search",
+                          "materio_get_pdf",
+                          "materio_get_pdf_url",
+                          "materio_get_subject_overview"
+                        ]
+                      },
+                      "arguments": {
+                        "type": "object",
+                        "description": "Arguments for the selected tool.",
+                        "oneOf": [
+                          {
+                            "title": "materio_list_resources",
+                            "properties": {
+                              "semester": { "type": "string", "description": "Semester number (1-6)" }
+                            }
+                          },
+                          {
+                            "title": "materio_search",
+                            "properties": {
+                              "query": { "type": "string", "description": "Search keyword" },
+                              "limit": { "type": "integer", "default": 20 }
+                            },
+                            "required": ["query"]
+                          },
+                          {
+                            "title": "materio_get_pdf",
+                            "properties": {
+                              "url": { "type": "string", "format": "uri" },
+                              "semester": { "type": "string" },
+                              "subject": { "type": "string" },
+                              "topic": { "type": "string" }
+                            }
+                          },
+                          {
+                            "title": "materio_get_pdf_url",
+                            "properties": {
+                              "semester": { "type": "string" },
+                              "subject": { "type": "string" },
+                              "topic": { "type": "string" }
+                            },
+                            "required": ["semester", "subject", "topic"]
+                          },
+                          {
+                            "title": "materio_get_subject_overview",
+                            "properties": {
+                              "semester": { "type": "string" },
+                              "subject": { "type": "string" }
+                            },
+                            "required": ["semester", "subject"]
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful tool response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "jsonrpc": { "type": "string" },
+                    "result": {
+                      "type": "object",
+                      "properties": {
+                        "content": {
+                          "type": "array",
+                          "items": { "type": "object" }
+                        }
+                      }
+                    },
+                    "id": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
