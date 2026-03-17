@@ -50,13 +50,20 @@ export default async function handler(req, res) {
 
   // ─── POST: Handle MCP requests ─────────────────────────────────────────
   if (req.method === "POST") {
-    // 🛡️ ChatGPT Compatibility Patch:
-    // The MCP SDK is extremely strict and requires 'text/event-stream' in the Accept header.
-    // ChatGPT only sends 'application/json', so we force the header here to avoid
-    // the "Not Acceptable" (406) error while still allowing standard JSON-RPC responses.
-    if (!req.headers.accept || !req.headers.accept.includes("text/event-stream")) {
-      req.headers.accept = "application/json, text/event-stream";
-    }
+    // 🛡️ Super-Patch: Use a Proxy to guarantee the headers are present.
+    // This ensures even if the SDK reads headers in a weird way, it gets the right values.
+    const patchedReq = new Proxy(req, {
+      get(target, prop) {
+        if (prop === 'headers') {
+          return {
+            ...target.headers,
+            'accept': 'application/json, text/event-stream',
+            'content-type': target.headers['content-type'] || 'application/json'
+          };
+        }
+        return Reflect.get(target, prop);
+      }
+    });
 
     try {
       const server = createServer();
@@ -74,7 +81,7 @@ export default async function handler(req, res) {
       });
 
       await server.connect(transport);
-      await transport.handleRequest(req, res, req.body);
+      await transport.handleRequest(patchedReq, res, req.body);
     } catch (error) {
       console.error("MCP handler error:", error);
 
