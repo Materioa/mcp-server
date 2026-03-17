@@ -13,13 +13,18 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { createServer } from "./server.js";
 
 async function main() {
-  // 🛡️ MCP Safety Guard: Redirect console.log to console.error.
+  // 🛡️ MCP Safety Guard: Suppress all console output except stderr.
   // This prevents libraries (like pdf-parse) from polluting stdout with 
-  // warnings/logs, which would break the MCP JSON-RPC protocol.
-  const originalLog = console.log;
-  console.log = (...args) => {
-    console.error(...args);
-  };
+  // warnings/logs/info/debug, which would break the MCP JSON-RPC protocol.
+  // Redirect all console methods to console.error (which writes to stderr).
+  const noop = () => {};
+  const redirectToStderr = (...args) => console.error(...args);
+  
+  console.log = redirectToStderr;
+  console.warn = redirectToStderr;
+  console.info = redirectToStderr;
+  console.debug = redirectToStderr;
+  // Keep console.error unchanged (it uses stderr)
 
   const server = createServer();
   const transport = new StdioServerTransport();
