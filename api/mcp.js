@@ -58,7 +58,16 @@ export default async function handler(req, res) {
       // This bypasses the SDK's transport layer which is overly strict about HTTP headers.
       if (method === "tools/call") {
         try {
-          const result = await server.executeToolManual(params.name, params.arguments);
+          // 🛡️ Argument Resolver:
+          // ChatGPT sometimes sends arguments nested in 'params.arguments', 
+          // but sometimes sends them directly in 'params'. This handles both.
+          const toolName = params?.name;
+          const toolArgs = params?.arguments || (params ? { ...params } : {});
+          
+          // Clean up toolArgs so we don't pass 'name' as an argument to the tool
+          if (toolArgs.name) delete toolArgs.name;
+
+          const result = await server.executeToolManual(toolName, toolArgs);
           res.status(200).json({
             jsonrpc: "2.0",
             result,

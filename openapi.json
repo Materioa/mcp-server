@@ -7,7 +7,7 @@
   },
   "servers": [
     {
-      "url": "https://your-project.vercel.app/api",
+      "url": "https://materioa.vercel.app/api",
       "description": "Production Vercel Server"
     }
   ],
@@ -40,6 +40,7 @@
                           "materio_search",
                           "materio_get_pdf",
                           "materio_get_pdf_url",
+                          "materio_get_share_link",
                           "materio_get_subject_overview"
                         ]
                       },
@@ -78,6 +79,13 @@
                               "topic": { "type": "string" }
                             },
                             "required": ["semester", "subject", "topic"]
+                          },
+                          {
+                            "title": "materio_get_share_link",
+                            "properties": {
+                              "url": { "type": "string", "format": "uri" }
+                            },
+                            "required": ["url"]
                           },
                           {
                             "title": "materio_get_subject_overview",

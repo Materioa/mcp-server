@@ -24,6 +24,31 @@ let cacheTimestamp = 0;
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 /**
+ * Generates a masked share URL for a given PDF CDN URL by calling the Materio Share API.
+ * This hides the actual CDN path and uses the site's /?share=XXXX format.
+ */
+async function generateMaskedUrl(actualUrl) {
+  try {
+    // We use the 'create' subAction which is specifically for the /?share= format
+    const response = await fetch("https://materioa.vercel.app/api/v2/features?action=pdf-share&subAction=create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ actualUrl })
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      if (data.maskId) {
+        return `https://materioa.vercel.app/?share=${data.maskId}`;
+      }
+    }
+  } catch (err) {
+    console.error("Masking error:", err.message);
+  }
+  return actualUrl; // Fallback to raw CDN URL
+}
+
+/**
  * Fetches and caches the resource library JSON from the CDN.
  */
 async function getResourceLibrary() {
@@ -321,11 +346,13 @@ Examples:
 
         for (const r of limitedResults) {
           const semLabel = r.semester === "9999" ? "Vault" : `Semester ${r.semester}`;
+          const maskedUrl = await generateMaskedUrl(r.url);
+          
           lines.push(`### ${r.topic}`);
           lines.push(`- **Semester:** ${semLabel}`);
           lines.push(`- **Subject:** ${r.subjectDisplay}`);
           lines.push(`- **Category:** ${r.category}`);
-          lines.push(`- **PDF URL:** ${r.url}`);
+          lines.push(`- **PDF Link:** ${maskedUrl}`);
           lines.push("");
         }
 
@@ -462,47 +489,40 @@ Examples:
   server.registerTool(
     "materio_get_pdf_url",
     {
-      title: "Get Materio PDF URL",
-      description: `Get the CDN download URL for a Materio PDF without fetching its content.
-
-Returns the direct URL to the PDF on the Materio CDN. Useful when you just need the link to share or reference the PDF, without downloading the full content.
-
-Args:
-  - semester (string): Semester number (e.g. "1", "2", "3", "4", "5", "6").
-  - subject (string): Subject name exactly as listed in the resource library.
-  - topic (string): Topic name exactly as listed in the resource library.
-
-Returns:
-  The CDN URL for the PDF.
-
-Examples:
-  - { semester: "4", subject: "Operating System", topic: "Deadlocks" }
-  - { semester: "2", subject: "Maths-2", topic: "Laplace Transform" }`,
+      title: "Get Secure Materio Share Link",
+      description: `Get a professional masked share link for a Materio PDF.
+      
+This returns a secure URL (e.g., materias.vercel.app/?share=...) that opens the PDF beautifully in the Materio viewer. Use this when finalizing a study session or providing resources to the user.`,
       inputSchema: {
-        semester: z.string()
-          .min(1, "Semester is required")
-          .describe("Semester number, e.g. '1', '2', '3', '4', '5', '6'."),
-        subject: z.string()
-          .min(1, "Subject is required")
-          .describe("Subject name exactly as listed in the resource library."),
-        topic: z.string()
-          .min(1, "Topic is required")
-          .describe("Topic name exactly as listed in the resource library.")
-      },
-      annotations: {
-        readOnlyHint: true,
-        destructiveHint: false,
-        idempotentHint: true,
-        openWorldHint: false
+        semester: z.string().describe("Semester number (1-6)"),
+        subject: z.string().describe("Subject name exactly as listed"),
+        topic: z.string().describe("Topic name exactly as listed")
       }
     },
     async ({ semester, subject, topic }) => {
-      const url = buildPdfUrl(semester, subject, topic);
+      const rawUrl = buildPdfUrl(semester, subject, topic);
+      const maskedUrl = await generateMaskedUrl(rawUrl);
       return {
-        content: [{
-          type: "text",
-          text: `**PDF URL:** ${url}\n\nYou can use this URL with the \`materio_get_pdf\` tool to fetch the full content.`
-        }]
+        content: [{ type: "text", text: `**Materio Share Link:** ${maskedUrl}` }]
+      };
+    }
+  );
+
+  // ─── Tool: materio_get_share_link ──────────────────────────────────────────
+
+  server.registerTool(
+    "materio_get_share_link",
+    {
+      title: "Generate Share Link",
+      description: "Generate a secure masked Materio share link from a raw CDN URL.",
+      inputSchema: {
+        url: z.string().url().describe("The raw CDN URL to mask")
+      }
+    },
+    async ({ url }) => {
+      const maskedUrl = await generateMaskedUrl(url);
+      return {
+        content: [{ type: "text", text: `**Secure Link:** ${maskedUrl}` }]
       };
     }
   );
@@ -593,8 +613,9 @@ Examples:
           lines.push(`## ${catObj.type}`);
           if (catObj.content && Array.isArray(catObj.content)) {
             for (const topic of catObj.content) {
-              const url = buildPdfUrl(semester, subject, topic);
-              lines.push(`- **${topic}** — [PDF](${url})`);
+              const rawUrl = buildPdfUrl(semester, subject, topic);
+              const maskedUrl = await generateMaskedUrl(rawUrl);
+              lines.push(`- **${topic}** — [Open PDF](${maskedUrl})`);
               totalTopics++;
             }
           }
