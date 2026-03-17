@@ -54,8 +54,41 @@ export default async function handler(req, res) {
       const server = createServer();
       const { method, params, id } = req.body;
 
-      // 🛡️ Universal Handler: Manual execution for tools/call
-      // This bypasses the SDK's transport layer which is overly strict about HTTP headers.
+      // 🛡️ Universal Handler: Manual execution for initialize, tools/list, and tools/call
+      if (method === "initialize") {
+        res.status(200).json({
+          jsonrpc: "2.0",
+          id,
+          result: {
+            protocolVersion: "2024-11-05",
+            capabilities: {
+              tools: {}
+            },
+            serverInfo: {
+              name: "materio-mcp-server",
+              version: "1.0.0"
+            }
+          }
+        });
+        return;
+      }
+
+      if (method === "tools/list") {
+        try {
+          const result = await server.listTools();
+          res.status(200).json({
+            jsonrpc: "2.0",
+            result,
+            id
+          });
+        } catch (e) {
+          res.status(500).json({ error: e.message });
+        } finally {
+          try { await server.close(); } catch (e) {}
+        }
+        return;
+      }
+
       if (method === "tools/call") {
         try {
           // 🛡️ Argument Resolver:

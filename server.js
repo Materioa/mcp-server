@@ -75,19 +75,23 @@ async function getResourceLibrary() {
 
 /**
  * Builds the CDN URL for a given PDF.
+ * Uses raw names to match the frontend and share API expectations.
  */
 function buildPdfUrl(semester, subject, topic) {
   if (semester === "9999") {
-    return `${CDN_BASE}/pdfs/${semester}/${subject}/vault/${encodeURIComponent(topic)}.pdf`;
+    return `${CDN_BASE}/pdfs/${semester}/${subject}/vault/${topic}.pdf`;
   }
-  return `${CDN_BASE}/pdfs/${semester}/${encodeURIComponent(subject)}/${encodeURIComponent(topic)}.pdf`;
+  return `${CDN_BASE}/pdfs/${semester}/${subject}/${topic}.pdf`;
 }
 
 /**
  * Fetches a PDF from the CDN and extracts its text content.
  */
 async function fetchPdfText(url) {
-  const response = await fetch(url);
+  // We MUST encode for the actual HTTP fetch, as some platforms/libraries 
+  // don't handle raw spaces in URLs.
+  const encodedUrl = new URL(url).toString();
+  const response = await fetch(encodedUrl);
   if (!response.ok) {
     throw new Error(`Failed to fetch PDF: HTTP ${response.status} from ${url}`);
   }
@@ -386,6 +390,9 @@ Examples:
 Downloads the PDF from the Materio CDN and extracts its text content so you can read and reason over it.
 Use this after searching/browsing to retrieve the actual study material.
 
+**Syllabus Fallback Strategy:**
+If this tool returns an "unreadable" error, you MUST immediately use 'materio_get_subject_overview' to find the 'Syllabus' or 'Course Overview' PDF URL and read that instead to understand the curriculum.
+
 You can provide EITHER a direct PDF URL (from a search result) OR the semester + subject + topic combination.
 
 IMPORTANT: This tool is designed to help users study. When answering questions based on PDF content:
@@ -452,7 +459,9 @@ Examples:
           return {
             content: [{
               type: "text",
-              text: "The PDF was downloaded but no text content could be extracted. It might be a scanned/image-only PDF."
+              text: `The PDF content is unreadable (likely a scanned image). 
+
+**Recommendation:** Please use the \`materio_get_subject_overview\` tool to find the **Syllabus** or **Course Overview** PDF instead. I can use that and my knowledge to assist you.`
             }]
           };
         }
@@ -492,7 +501,11 @@ Examples:
       title: "Get Secure Materio Share Link",
       description: `Get a professional masked share link for a Materio PDF.
       
-This returns a secure URL (e.g., materias.vercel.app/?share=...) that opens the PDF beautifully in the Materio viewer. Use this when finalizing a study session or providing resources to the user.`,
+This returns a secure URL (e.g., materias.vercel.app/?share=...) that opens the PDF beautifully in the Materio viewer. 
+
+**Usage Instructions:**
+- Use this when finalizing a study session.
+- If the original PDF was scanned/unreadable, use this tool to provide the share link for the **Syllabus** instead so the user can verify the curriculum manually.`,
       inputSchema: {
         semester: z.string().describe("Semester number (1-6)"),
         subject: z.string().describe("Subject name exactly as listed"),
