@@ -1,15 +1,14 @@
 /**
  * Materio MCP Server — Vercel Serverless HTTP Entry Point
  * 
- * This is the Vercel serverless function that handles MCP requests
- * over Streamable HTTP. Each request creates a fresh stateless transport.
+ * This is the Vercel serverless function that handles MCP requests.
+ * Each request is handled via manual JSON-RPC handlers.
  * 
  * Endpoint: POST /api/mcp
  * 
  * © 2024-2026, Materio by JTC.
  */
 
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { createServer } from "../server.js";
 
 /**
@@ -134,14 +133,17 @@ export default async function handler(req, res) {
           return;
         }
 
-        // ─── Native MCP Fallback: For clients that ARE MCP aware ─────────────
-        const transport = new StreamableHTTPServerTransport({
-          sessionIdGenerator: undefined,
-          enableJsonResponse: true
+        // ─── Unsupported Methods ────────────────────────────────────────────
+        // For any other MCP method not handled above, return error
+        res.status(200).json({
+          jsonrpc: "2.0",
+          error: { 
+            code: -32601, 
+            message: `Method '${method}' is not supported by this MCP server`
+          },
+          id
         });
-        
-        await server.connect(transport);
-        await transport.handleRequest(req, res, req.body);
+        return;
       } catch (error) {
         // Use original console.error for logging errors
         originalLog("MCP handler error:", error);
