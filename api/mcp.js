@@ -80,7 +80,9 @@ export default async function handler(req, res) {
         const { method, params, id } = req.body;
 
         //  Universal Handler: Manual execution for initialize, tools/list, and tools/call
-        const isRestfulChatGPT = req.url && req.url.includes('/api/mcp/') && req.url.split('/api/mcp/')[1];
+        const possibleTools = ["list_resources", "get_resource", "fetch_pdf", "share_link", "subject_overview", "search"];
+        const toolFromUrl = possibleTools.find(t => req.url && req.url.includes(t));
+        const isRestfulChatGPT = !!toolFromUrl;
         const effectiveMethod = isRestfulChatGPT ? "tools/call" : method;
 
         if (effectiveMethod === "initialize") {
@@ -122,23 +124,34 @@ export default async function handler(req, res) {
         if (effectiveMethod === "tools/call") {
           try {
             //  Argument Resolver:
-            // ChatGPT sometimes sends arguments nested in 'params.arguments', 
-            // but sometimes sends them directly in 'params' or 'req.body'.
-            const toolName = params?.name || (req.url && req.url.split('/api/mcp/')[1]?.split('?')[0]);
-
+            // Match the tool explicitly
+            const toolName = params?.name || toolFromUrl;
+            
             // If RESTful ChatGPT, args are the entire body (or params if nested)
-            let rawArgs = req.body;
+            let rawArgs = req.body || {};
             if (params) rawArgs = params.arguments || params;
-
+            
             const toolArgs = { ...rawArgs };
-
+            
             // Clean up toolArgs so we don't pass system keys
-            if (toolArgs.name) delete toolArgs.name;
-            if (toolArgs.method) delete toolArgs.method;
-            if (toolArgs.id) delete toolArgs.id;
-            if (toolArgs.params) delete toolArgs.params;
+            delete toolArgs.name;
+            delete toolArgs.method;
+            delete toolArgs.id;
+            delete toolArgs.params;
+            delete toolArgs.jsonrpc;
 
             const result = await server.executeToolManual(toolName, toolArgs);
+
+            // Give ChatGPT pure response strings, unwrap the MCP protocol constraints
+            if (isRestfulChatGPT) {
+               if (result.isError) {
+                  res.status(400).json({ error: result.content[0].text });
+               } else {
+                  res.status(200).json({ response: result.content[0].text });
+               }
+               return;
+            }
+
             res.status(200).json({
               jsonrpc: "2.0",
               result,
