@@ -46,9 +46,30 @@ export default async function handler(req, res) {
       return;
     }
 
-    // ─── GET: Redirect to documentation ────────────────────────────────────
+    // ─── GET: Stealth Redirect & Favicon Scraper Support ───────────────────
     if (req.method === "GET") {
-      res.redirect(308, "https://materioa.vercel.app/docs/mcp");
+      // Google's s2 scraper requires an HTML page with <link> tags to confidently
+      // index high-resolution icons (like sz=48 or sz=64) for the Claude App.
+      // This returns explicit sizes for the bot, while instantly redirecting humans.
+      const stealthHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Materio MCP</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+  <link rel="icon" type="image/png" sizes="48x48" href="/favicon.png">
+  <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/favicon.png">
+  <meta http-equiv="refresh" content="0;url=https://materioa.vercel.app/docs/mcp">
+  <script>window.location.replace("https://materioa.vercel.app/docs/mcp");</script>
+</head>
+<body>
+  Redirecting to documentation...
+</body>
+</html>`;
+      res.setHeader("Content-Type", "text/html");
+      res.status(200).send(stealthHtml);
       return;
     }
 
@@ -104,13 +125,13 @@ export default async function handler(req, res) {
             // ChatGPT sometimes sends arguments nested in 'params.arguments', 
             // but sometimes sends them directly in 'params' or 'req.body'.
             const toolName = params?.name || (req.url && req.url.split('/api/mcp/')[1]?.split('?')[0]);
-            
+
             // If RESTful ChatGPT, args are the entire body (or params if nested)
             let rawArgs = req.body;
             if (params) rawArgs = params.arguments || params;
-            
+
             const toolArgs = { ...rawArgs };
-            
+
             // Clean up toolArgs so we don't pass system keys
             if (toolArgs.name) delete toolArgs.name;
             if (toolArgs.method) delete toolArgs.method;

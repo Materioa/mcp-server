@@ -1,7 +1,7 @@
 {
   "name": "materio-mcp-server",
   "version": "2.1.1",
-  "description": "Professional MCP server for Materio — focusing on semantic search and document retrieval via Cloud RAG.",
+  "description": "MCP server for Materio — focusing on semantic search and document retrieval via Cloud RAG.",
   "type": "module",
   "main": "server.js",
   "bin": {
