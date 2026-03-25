@@ -46,19 +46,9 @@ export default async function handler(req, res) {
       return;
     }
 
-    // ─── GET: Health check / server info ───────────────────────────────────
+    // ─── GET: Redirect to documentation ────────────────────────────────────
     if (req.method === "GET") {
-      res.status(200).json({
-        name: "materio-mcp-server",
-        version: "1.0.0",
-        description: "Materio MCP Server — search and read educational PDFs via MCP protocol",
-        status: "ok",
-        transport: "streamable-http",
-        endpoint: "/api/mcp",
-        logo: "/favicon.png",
-        icon: "/favicon.png",
-        usage: "Send MCP JSON-RPC requests via POST to this endpoint."
-      });
+      res.redirect(308, "https://materioa.vercel.app/docs/mcp");
       return;
     }
 
