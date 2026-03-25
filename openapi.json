@@ -1,132 +1,169 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Materio MCP Server",
-    "description": "API for searching, listing, and reading Materio educational PDF resources. Supports browsing by semester, subject search, and full-text PDF extraction.",
-    "version": "1.0.0"
+    "title": "Materio MCP",
+    "description": "Professional access to the Materio document library and semantic knowledge base. Features priority semantic search (RAG) and direct document retrieval.",
+    "version": "2.1.1"
   },
-  "servers": [
-    {
-      "url": "https://materioa.vercel.app/api",
-      "description": "Production Vercel Server"
-    }
-  ],
   "paths": {
-    "/mcp": {
+    "/search": {
       "post": {
-        "summary": "Call Materio MCP Tools",
-        "description": "Unified endpoint for all Materio tools including search, list, and PDF reading. This endpoint follows the MCP JSON-RPC 2.0 protocol.",
-        "operationId": "callMcpTool",
+        "summary": "Step 1: Perform semantic RAG search across the Materio library.",
+        "description": "Primary tool for answering user questions. Returns relevant text chunks with source metadata.",
+        "operationId": "search",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["jsonrpc", "method", "params", "id"],
                 "properties": {
-                  "jsonrpc": { "type": "string", "enum": ["2.0"] },
-                  "method": { "type": "string", "enum": ["tools/call"] },
-                  "id": { "type": "integer", "example": 1 },
-                  "params": {
-                    "type": "object",
-                    "required": ["name", "arguments"],
-                    "properties": {
-                      "name": {
-                        "type": "string",
-                        "description": "The name of the Materio tool to call.",
-                        "enum": [
-                          "materio_list_resources",
-                          "materio_search",
-                          "materio_get_pdf",
-                          "materio_get_pdf_url",
-                          "materio_get_share_link",
-                          "materio_get_subject_overview"
-                        ]
-                      },
-                      "arguments": {
-                        "type": "object",
-                        "description": "Arguments for the selected tool.",
-                        "oneOf": [
-                          {
-                            "title": "materio_list_resources",
-                            "properties": {
-                              "semester": { "type": "string", "description": "Semester number (1-6)" }
-                            }
-                          },
-                          {
-                            "title": "materio_search",
-                            "properties": {
-                              "query": { "type": "string", "description": "Search keyword" },
-                              "limit": { "type": "integer", "default": 20 }
-                            },
-                            "required": ["query"]
-                          },
-                          {
-                            "title": "materio_get_pdf",
-                            "properties": {
-                              "url": { "type": "string", "format": "uri" },
-                              "semester": { "type": "string" },
-                              "subject": { "type": "string" },
-                              "topic": { "type": "string" }
-                            }
-                          },
-                          {
-                            "title": "materio_get_pdf_url",
-                            "properties": {
-                              "semester": { "type": "string" },
-                              "subject": { "type": "string" },
-                              "topic": { "type": "string" }
-                            },
-                            "required": ["semester", "subject", "topic"]
-                          },
-                          {
-                            "title": "materio_get_share_link",
-                            "properties": {
-                              "url": { "type": "string", "format": "uri" }
-                            },
-                            "required": ["url"]
-                          },
-                          {
-                            "title": "materio_get_subject_overview",
-                            "properties": {
-                              "semester": { "type": "string" },
-                              "subject": { "type": "string" }
-                            },
-                            "required": ["semester", "subject"]
-                          }
-                        ]
-                      }
-                    }
+                  "query": {
+                    "type": "string",
+                    "description": "The natural language question."
+                  },
+                  "semester": {
+                    "type": "string"
+                  },
+                  "subject": {
+                    "type": "string"
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "default": 5
                   }
-                }
+                },
+                "required": [
+                  "query"
+                ]
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Successful tool response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "jsonrpc": { "type": "string" },
-                    "result": {
-                      "type": "object",
-                      "properties": {
-                        "content": {
-                          "type": "array",
-                          "items": { "type": "object" }
-                        }
-                      }
-                    },
-                    "id": { "type": "integer" }
+            "description": "Returns relevant chunks and source info."
+          }
+        }
+      }
+    },
+    "/fetch_pdf": {
+      "post": {
+        "summary": "Step 2: Fallback direct document fetch.",
+        "description": "Retrieves raw content if semantic search results are insufficient or if the user requests a deep dive into a specific PDF.",
+        "operationId": "fetch_pdf",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "semester": {
+                    "type": "string"
+                  },
+                  "subject": {
+                    "type": "string"
+                  },
+                  "topic": {
+                    "type": "string"
+                  },
+                  "filetype": {
+                    "type": "string",
+                    "enum": [
+                      "pdf",
+                      "docx"
+                    ],
+                    "default": "pdf"
                   }
-                }
+                },
+                "required": [
+                  "semester",
+                  "subject",
+                  "topic"
+                ]
               }
             }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Returns raw status and size."
+          }
+        }
+      }
+    },
+    "/get_resource": {
+      "get": {
+        "summary": "Search the library file tree for study materials by name.",
+        "operationId": "get_resource",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "semester",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subject",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns a list of matching resources."
+          }
+        }
+      }
+    },
+    "/list_resources": {
+      "get": {
+        "summary": "Get an overview of available semesters and subjects.",
+        "operationId": "list_resources",
+        "responses": {
+          "200": {
+            "description": "Returns a JSON hierarchy of the library."
+          }
+        }
+      }
+    },
+    "/share_link": {
+      "post": {
+        "summary": "Generate a masked share link for any raw URL.",
+        "operationId": "share_link",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "url"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Returns a masked share link string."
           }
         }
       }

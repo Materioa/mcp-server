@@ -1,22 +1,25 @@
 {
   "name": "materio-mcp-server",
-  "version": "1.0.0",
-  "description": "MCP server for Materio — enables AI assistants like Claude and ChatGPT to search, browse, and read Materio educational PDFs",
+  "version": "2.1.1",
+  "description": "Professional MCP server for Materio — focusing on semantic search and document retrieval via Cloud RAG.",
   "type": "module",
-  "main": "index.js",
+  "main": "server.js",
   "bin": {
-    "materio-mcp-server": "./index.js"
+    "materio-mcp-server": "./server.js"
   },
   "scripts": {
-    "start": "node index.js",
-    "dev": "node index.js",
-    "setup:claude": "node scripts/claude.js"
+    "start": "node server.js",
+    "dev": "node server.js"
   },
   "engines": {
     "node": ">=18"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.6.1",
+    "@supabase/supabase-js": "^2.99.2",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "node-fetch": "^3.3.2",
     "zod": "^3.23.8",
     "pdf-parse": "^1.1.1"
   },
